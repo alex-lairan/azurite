@@ -1,6 +1,7 @@
-# TODO: Write documentation for `Azurite`
+require "./azurite/entity"
+require "./azurite/query"
+require "./azurite/repository"
+
 module Azurite
   VERSION = "0.1.0"
-
-  # TODO: Put your code here
 end
