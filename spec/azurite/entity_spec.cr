@@ -9,7 +9,60 @@ require "../spec_helper"
 # end
 
 module Foo
+  alias SearchType = Hash(String, SearchSubtype)
+  alias SearchSubtype = String | Int32
+
+  class FindProcedure
+    @query = Hash(String, SearchType).new
+
+    def initialize(@query, @key : String)
+    end
+
+    def eq(val : Int32) : FindProcedure
+      @query[@key] ||= SearchType.new
+      @query[@key]["$eq"] = val
+
+      self
+    end
+
+    def gt(val : Int32) : FindProcedure
+      @query[@key] ||= SearchType.new
+      @query[@key]["$gt"] = val
+
+      self
+    end
+
+    def lt(val : Int32) : FindProcedure
+      @query[@key] ||= SearchType.new
+      @query[@key]["$lt"] = val
+
+      self
+    end
+
+    def &(procedure : FindProcedure)
+      @query.merge(procedure.query)
+
+      self
+    end
+
+    def |(procedure : FindProcedure)
+      self
+    end
+
+    def query
+      @query
+    end
+  end
+
   class WhereBuilder
+    getter query : Hash(String, Hash(String, String | Int32))
+
+    def initialize
+      @query = Hash(String, Hash(String, String | Int32)).new
+    end
+
+    def initialize(@query)
+    end
   end
 
   class Entity
@@ -50,21 +103,16 @@ module Foo
 
     macro __build_query__
       class InternalBuilder < WhereBuilder
-        {% klasses = @type.ancestors %}
-        {% for name, index in klasses %}
-          {% fields = FIELD_MAPPINGS[name.id] %}
-
-          {% if fields && !fields.empty? %}
-            {% for name, opts in fields %}
-              def {{ name.id }}
-                {{ opts[:klass] }}
-              end
-            {% end %}
-          {% end %}
+        {% for name, opts in FIELDS %}
+          def {{ name.id }}
+            procedure = with FindProcedure.new(@query, {{name.stringify}}) yield
+            @query = procedure.query
+            self
+          end
         {% end %}
       end
 
-      def self.builder : WhereBuilder.class
+      def self.builder : InternalBuilder.class
         InternalBuilder
       end
     end
@@ -100,24 +148,22 @@ module Foo
     end
 
     @limit = 0
-    @find : WhereBuilder
-
-    def initialize
-      @find = T.builder.new
-    end
+    @query = Hash(String, Hash(String, String | Int32)).new
 
     def builder
-      @find
+      T.builder.new(@query)
     end
 
-    def where : Query(T)
-      with @find yield
+    def where : Repository(T)
+      _builder = with builder yield
+      @query = _builder.query
       self
     end
   end
 
   class User < Entity
     attribute age : Int32
+    attribute name : String
   end
 
   class Users < Repository(User)
@@ -136,6 +182,12 @@ describe Azurite::Entity do
 
     repo = Foo::Users.new
     pp repo
+    pp repo.builder
+
+    repo.where {
+      age { gt(5) & lt(100) }
+    }
+
     pp repo.builder
   end
 end
