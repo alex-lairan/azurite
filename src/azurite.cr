@@ -1,3 +1,4 @@
+require "./azurite/where_builder"
 require "./azurite/entity"
 require "./azurite/query"
 require "./azurite/repository"
