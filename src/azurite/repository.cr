@@ -1,39 +1,65 @@
-require "mongo"
+require "./database"
 
 module Azurite
-  class Repository
-    getter client : Mongo::Client
-    getter database : Mongo::Database
+  # A `Repository` represent a query interface.
+  #
+  # The type T represent an Entity that build a `WhereBuilder`
+  #
+  # Example :
+  # ```
+  # repo = Repository(SomeEntity).new
+  # repo.where { some_property { gt(5) } }
+  # repo.limit(50)
+  # repo.execute
+  # ```
+  class Repository(T)
+    @@collection_name = ""
 
+    # Define the database collection.
+    def self.collection_name=(name : String)
+      @@collection_name = name
+    end
 
-    def initialize(db_url, db_name)
-      @client = Mongo::Client.new db_url
-      @database = @client[db_name]
+    # :nodoc:
+    def self.collection_name
+      @@collection_name
+    end
+
+    @limit = 0
+    @query = Hash(String, Hash(String, String | Int32)).new
+
+    def initialize(@repo : Azurite::Database)
+    end
+
+    def builder
+      T.builder.new(@query)
+    end
+
+    def where : Repository(T)
+      _builder = with builder yield
+      @query = _builder.query
+      self
+    end
+
+    def limit(count : Int) : Query(T)
+      @limit = count
+      self
+    end
+
+    def count : Query(T)
+      self
+    end
+
+    def query
+      @find.query
+    end
+
+    def exec : Array(T)
+      [] of T
+    end
+
+    def find : T?
+      where.limit(1).exec.first
     end
   end
 end
-
-# require "mongo"
-# class Mongo::ORM::Adapter
-  # property client : Mongo::Client
-  # property database : Mongo::Database
-#   property database_name : String
-#   DATABASE_YML = "config/database.yml"
-
-#   def initialize
-#     database_url : String = "mongodb://localhost:27017"
-#     database_name : String = "mongo_orm_db"
-#     if ENV["DATABASE_URL"]?
-#       database_url = ENV["DATABASE_URL"]
-#       database_name = ENV["DATABASE_NAME"] if ENV["DATABASE_NAME"]
-#     elsif File.exists?(DATABASE_YML)
-#       yaml = YAML.parse(File.read DATABASE_YML)
-#       database_url = yaml["database_url"].to_s if yaml["database_url"]?
-#       database_name = yaml["database_name"].to_s if yaml["database_name"]?
-#     end
-#     @client = Mongo::Client.new database_url
-#     database_name = ENV["DATABASE_NAME"] if ENV["DATABASE_NAME"]?
-#     @database = @client[database_name]
-#     @database_name = database_name
-#   end
-# end

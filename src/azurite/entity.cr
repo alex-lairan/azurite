@@ -1,38 +1,17 @@
-require "./where_builder"
+require "./query/builder"
+require "./query/procedure"
 
 module Azurite
-  # class FindBuilder(T)
-  #   @query : Hash(String, SearchType)
-
-  #   def initialize
-  #     @query = Hash(String, SearchType).new
-  #   end
-
-  #   def initialize(@query)
-  #   end
-
-  #   def age
-  #     procedure = with FindProcedure.new(@query, "age") yield
-  #     @query = procedure.query
-  #     self
-  #   end
-
-  #   def query
-  #     @query
-  #   end
-  # end
-
-  abstract class Entity
+  class Entity
     FIELD_MAPPINGS = {} of Nil => Nil
 
     macro inherited
-      # Macro level constants
       FIELDS = {} of Nil => Nil
-      DEFAULTS = {} of Nil => Nil
       HAS_KEYS = [false]
 
       macro finished
         __process_attributes__
+        __build_query__
       end
     end
 
@@ -56,6 +35,22 @@ module Azurite
             { :{{name}}, {{opts[:klass]}}},
           {% end %}
         ] {% if !HAS_KEYS[0] %} of Nil {% end %}
+      end
+    end
+
+    macro __build_query__
+      class InternalBuilder < Azurite::Query::Builder
+        {% for name, opts in FIELDS %}
+          def {{ name.id }}
+            procedure = with Azurite::Query::Procedure.new(@query, {{name.stringify}}) yield
+            @query = procedure.query
+            self
+          end
+        {% end %}
+      end
+
+      def self.builder : InternalBuilder.class
+        InternalBuilder
       end
     end
 
