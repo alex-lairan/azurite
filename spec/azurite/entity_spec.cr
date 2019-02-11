@@ -63,6 +63,11 @@ module Foo
 
     def initialize(@query)
     end
+
+    def &(other)
+      @query = @query.merge(other.query)
+      self
+    end
   end
 
   class Entity
@@ -185,7 +190,7 @@ describe Azurite::Entity do
     pp repo.builder
 
     repo.where {
-      age { gt(5) & lt(100) }
+      age { gt(5) & lt(100) } & name { gt(5) }
     }
 
     pp repo.builder
