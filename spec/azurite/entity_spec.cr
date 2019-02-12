@@ -43,17 +43,28 @@ describe Azurite::Entity do
     # pp repo
     # pp repo.builder
 
-    repo.where {
-      age { eq(19) }
-    }
+    # repo.where {
+    #   age { eq(19) }
+    # }
 
-    pp repo.exec
+    # pp repo.exec
 
-    repo2 = Foo::Contents.new(db)
-    repo2.where {
-      name { eq("Prem") }
-    }
+    # repo2 = Foo::Contents.new(db)
+    # repo2.where {
+    #   name { eq("Prem") }
+    # }
 
-    pp repo2.exec
+    # pp repo2.exec
+
+    new_one = Foo::User.new({
+      "name" => "Kelly",
+      "age" => 25f64
+    })
+
+    pp new_one
+
+    repo.insert([
+      new_one
+    ])
   end
 end

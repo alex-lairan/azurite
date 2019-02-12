@@ -12,6 +12,7 @@ module Azurite
       macro finished
         __process_attributes__
         __build_query__
+        __initializers__
       end
     end
 
@@ -98,5 +99,86 @@ module Azurite
     end
 
     property id : BSON::ObjectId?
+
+    macro __initializers__
+      def initialize(**args : Object)
+        set_attributes(args.to_h)
+      end
+
+      def initialize(args : Hash(Symbol | String, Azurite::Type))
+        set_attributes(args)
+      end
+
+      private def set_attributes(args : Hash(String | Symbol, Azurite::Type))
+        args.each do |k, v|
+          cast_to_field(k, v.as(Azurite::Type))
+        end
+      end
+
+      private def cast_to_field(name, value : Azurite::Type)
+        {% unless FIELDS.empty? %}
+          case name.to_s
+            {% for _name, options in FIELDS %}
+              {% type = options[:klass] %}
+              when "{{_name.id}}" then @{{_name.id}} = cast_value(value, {{type}}).as({{type}}?)
+            {% end %}
+          end
+        {% end %}
+      end
+
+      private def cast_value(value : Nil, type)
+        nil
+      end
+
+      private def cast_value(value : Azurite::Type, type : Int32.class)
+        value.is_a?(String) ? value.to_i32(strict: false) : value.is_a?(Int64) ? value.to_i32 : value.as(Int32)
+      end
+
+      private def cast_value(value : Azurite::Type, type : Int64.class)
+        value.is_a?(String) ? value.to_i64(strict: false) : value.as(Int64)
+      end
+
+      private def cast_value(value : Azurite::Type, type : Float32.class)
+        value.is_a?(String) ? value.to_f32(strict: false) : value.is_a?(Float64) ? value.to_f32 : value.as(Float32)
+      end
+
+      private def cast_value(value : Azurite::Type, type : Float64.class)
+        value.is_a?(String) ? value.to_f64(strict: false) : value.as(Float64)
+      end
+
+      private def cast_value(value : Azurite::Type, type : Bool.class)
+        Set.new(["1", "yes", "true", true, 1]).includes?(value)
+      end
+
+      private def cast_value(value : Azurite::Type, type : Time.class)
+        value
+      end
+
+      private def cast_value(value : Azurite::Type, type : String.class)
+        value.to_s
+      end
+
+      private def cast_value(value : Azurite::Type, type : Array(T).class)
+        value.map { |val| cast_value(val, {{ type.resolve.type_vars[0] }}) }
+      end
+
+      private def cast_value(value : Azurite::Type, type)
+        pp type
+
+        nil
+      end
+
+      # private def cast_value(value : Azurite::Type, type)
+      #   value.to_s
+      # end
+    end
+
+    def new_record?
+      @id == nil
+    end
   end
 end
+
+
+# Add attributes for instance
+# Insert to database

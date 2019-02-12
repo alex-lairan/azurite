@@ -81,5 +81,9 @@ module Azurite
     def find : T?
       where.limit(1).exec.first
     end
+
+    def insert(values : Array(T)) : Bool
+      true
+    end
   end
 end
