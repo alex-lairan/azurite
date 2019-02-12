@@ -13,16 +13,18 @@ module Azurite
   # repo.execute
   # ```
   class Repository(T)
-    @@collection_name = ""
+    macro inherited
+      @@collection_name : String = ""
 
-    # Define the database collection.
-    def self.collection_name=(name : String)
-      @@collection_name = name
-    end
+      # Define the database collection.
+      def self.collection(name : String)
+        @@collection_name = name
+      end
 
-    # :nodoc:
-    def self.collection_name
-      @@collection_name
+      # :nodoc:
+      def self.collection_name : String
+        @@collection_name
+      end
     end
 
     @limit = 0
@@ -36,7 +38,8 @@ module Azurite
     end
 
     def where : Repository(T)
-      _builder = with builder yield
+      _builder = builder
+      with _builder yield
       @query = _builder.query
       self
     end
@@ -55,7 +58,24 @@ module Azurite
     end
 
     def exec : Array(T)
-      [] of T
+      collection_name = self.class.collection_name
+      pp collection_name
+      collection = @repo.database[collection_name]
+
+      result = collection.find(@query)
+      pp result
+
+      result.map do |bson|
+        T.from_bson(bson)
+      end
+    end
+
+    def self.all : Array(T)
+      new.all
+    end
+
+    def all : Array(T)
+      where.exec
     end
 
     def find : T?

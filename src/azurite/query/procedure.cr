@@ -9,7 +9,7 @@ module Azurite
       def initialize(@query, @key : String)
       end
 
-      def eq(val : Int32) : Procedure
+      def eq(val : Int32 | String) : Procedure
         @query[@key] ||= SearchType.new
         @query[@key]["$eq"] = val
 

@@ -31,10 +31,29 @@ module Azurite
 
       def self.attributes
         [
+          { :id, BSON::ObjectId },
           {% for name, opts in FIELDS %}
             { :{{name}}, {{opts[:klass]}}},
           {% end %}
         ] {% if !HAS_KEYS[0] %} of Nil {% end %}
+      end
+
+      def self.from_bson(bson : BSON)
+        model = new
+
+        model.id = bson["_id"].as(BSON::ObjectId)
+
+        {% for name, opts in FIELDS %}
+          if bson.has_key?({{name.stringify}})
+            {% if opts[:klass].resolve < Array %}
+              model.{{name}} = bson[{{name.stringify}}].as(BSON).map { |item| item.value.as({{ opts[:klass].type_vars[0] }}) }
+            {% else %}
+              model.{{name}} = bson[{{name.stringify}}].as({{opts[:klass]}})
+            {% end %}
+          end
+        {% end %}
+
+        model
       end
     end
 
@@ -55,12 +74,18 @@ module Azurite
     end
 
     macro attribute(name, converter = nil)
+      @{{name.var}} : {{name.type}} | Nil
+
       def {{name.var}} : {{name.type}} | Nil
-        {% if name.value %}
-          {{ name.value }}
-        {% else %}
-          nil
-        {% end %}
+        @{{name.var}}
+      end
+
+      def {{name.var}}! : {{name.type}}
+        @{{ name.var }}.not_nil!
+      end
+
+      def {{name.var}}=(val : {{name.type}})
+        @{{ name.var }} = val
       end
 
       {%
@@ -71,5 +96,7 @@ module Azurite
       %}
       {% HAS_KEYS[0] = true %}
     end
+
+    property id : BSON::ObjectId?
   end
 end

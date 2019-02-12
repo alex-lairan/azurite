@@ -10,11 +10,21 @@ require "../spec_helper"
 
 module Foo
   class User < Azurite::Entity
-    attribute age : Int32
+    attribute age : Float64
     attribute name : String
   end
 
   class Users < Azurite::Repository(User)
+    collection "users"
+  end
+
+  class Content < Azurite::Entity
+    attribute name : String
+    attribute items : Array(String)
+  end
+
+  class Contents < Azurite::Repository(Content)
+    collection "content"
   end
 end
 
@@ -26,17 +36,24 @@ describe Azurite::Entity do
     # pp UserRepo.new(repo).builder
 
     pp Foo::User.attributes
-    pp Foo::User.builder.new
+    # pp Foo::User.builder.new
 
     db = Azurite::Database.new("mongodb://localhost:27017", "test")
     repo = Foo::Users.new(db)
-    pp repo
-    pp repo.builder
+    # pp repo
+    # pp repo.builder
 
     repo.where {
-      age { gt(5) & lt(100) } & name { gt(5) }
+      age { eq(19) }
     }
 
-    pp repo.builder
+    pp repo.exec
+
+    repo2 = Foo::Contents.new(db)
+    repo2.where {
+      name { eq("Prem") }
+    }
+
+    pp repo2.exec
   end
 end

@@ -10,5 +10,5 @@ license: MIT
 
 dependencies:
   mongo:
-    github: datanoise/mongo.cr
-    branch: master
+    github: sam0x17/mongo.cr
+    commit: 196d1e9830dad9ecd1aef758da41fc712cb33c86
